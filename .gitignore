@@ -1,0 +1,9 @@
+# Data folder
+Data/Webhooks/*
+!Data/Webhooks/your_webhooks_exist_here.txt
+# Data/libs folder
+Data/libs/__pycache__
+
+# Project root
+tempCodeRunnerFile.py
+test.py
