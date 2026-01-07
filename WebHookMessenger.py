@@ -20,15 +20,17 @@ def LoadSettings():
     global SettingsData
 
     try:
-        with open(SettingsPath) as f:
+        with open(SettingsPath, "r") as f:
             SettingsData = json.load(f)
+            return
 
-    except json.decoder.JSONDecodeError:
+    except (FileNotFoundError, json.JSONDecodeError):
+        log.Logwarn("Settings file is either missing or corrupted! Recreating defaults...")
+        os.makedirs(os.path.dirname(SettingsPath), exist_ok=True)
+
+        SettingsData = DefaultSettings.copy()
         with open(SettingsPath, "w") as f:
-            json.dump(DefaultSettings, f, indent=4)
-
-        with open(SettingsPath) as f:
-            SettingsData = json.load(f)
+            json.dump(SettingsData, f, indent=4)
 
 def ClearTerminal():
     if os.name == 'nt':
