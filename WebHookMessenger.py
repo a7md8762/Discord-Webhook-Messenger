@@ -639,36 +639,6 @@ def Settings():
         print()
         log.Loginfo("Canceling...")
 
-def TestCommand():
-    if SettingsData["developermode"]:
-        print("yes")
-    else:
-        print("no")
-
-def TestWebhook():
-    Webhook = input("enter webhook to test: ")
-    try:
-        r = requests.get(Webhook, timeout=10)
-        match r.status_code:
-            case 200 | 204:
-                print("success")
-                return
-            case 429:
-                print("ratelimit")
-                return
-            case 401 | 403 | 404:
-                print("fail")
-            case _:
-                print("unknown status code")
-    except requests.Timeout:
-        print("timeout")
-    except requests.ConnectionError:
-        print("conerror")
-    except requests.RequestException:
-        print("unknown exception")
-    
-    print("end of test")
-
 # Lists
 # <------------------------
 AvailableCommands = {
@@ -683,9 +653,7 @@ AvailableCommands = {
     "exit": {"aliases":["exit"], "command":ExitCommand, "description":"Exits the program."},
     "sendmessage": {"aliases":["sendmessage", "sendmsg", "msg"], "command":SendMessage, "description":"Sends a single message to the established connection."},
     "enterchatmode": {"aliases":["enterchatmode", "enterchat", "chatmode"], "command":EnterChatMode, "description":"Let's you enter a field to message the webhook established with freely."},
-    "settings": {"aliases":["settings", "config", "cfg"], "command":Settings, "description":"Let's you edit the settings of the program."},
-    "testcommand": {"aliases":["testcommand", "test"], "command":TestCommand, "description":"Code test."},
-    "testwebhook": {"aliases":["testwebhook", "whtest"], "command":TestWebhook, "description":"Webhook test."}
+    "settings": {"aliases":["settings", "config", "cfg"], "command":Settings, "description":"Let's you edit the settings of the program."}
     }
 
 DefaultSettings = {
