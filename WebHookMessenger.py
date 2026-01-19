@@ -473,6 +473,114 @@ def SendMessage():
     except KeyboardInterrupt:
         print()
         log.Loginfo("Canceling...")
+    
+def SpamSendMessage():
+    global SelectedWebhookName
+    global SelectedWebhookPath
+    global SelectedWebhookURL
+
+    try:
+        if not SelectedWebhookPath == None:
+            with open(SelectedWebhookPath) as f:
+                WebhookData = json.load(f)
+            match WebhookData["WebhookStatus"]:
+                case "success" | "ratelimit" | "conerror" | "timeout" | "unknown":
+                    if not WebhookData["WebhookStatus"] == "success":
+                        log.Logwarn(f"The webhook was not checked correctly due to connection errors! (Status: {WebhookData["WebhookStatus"]}).")
+                        while True:
+                            match log.Loginput("Do you wish to continue and send a message anyways? Please Choose (y/n): ").lower():
+                                case "y" | "ye" | "yes":
+                                    break
+                                case "n" | "no":
+                                    log.Loginfo("Canceling...")
+                                    return
+                                case _:
+                                    log.Logerror("Wrong option! Please choose again...")
+
+                    # content input
+                    content = log.Loginput("Message to send: ")
+                    # iterations input
+                    while True:
+                        try:
+                            SpamIterations = int(log.Loginput("Enter how many times to spam: "))
+                            if not SpamIterations > 0:
+                                log.Logerror("Please enter a number bigger than 0!")
+                                continue
+
+                        except ValueError:
+                            log.Logerror("Please enter a valid integer!")
+                            continue
+                        break
+                    # with message signature input
+                    while True:
+                        match log.Loginput("Do you want to send with the signature? Please Choose (y/n): ").lower():
+                            case "y" | "ye" | "yes":
+                                data = {"content": content + MessageSignature}
+                                break
+                            case "n" | "no":
+                                data = {"content": content}
+                                break
+                            case _:
+                                log.Logerror("Wrong option! Please choose again...")
+
+                    for i in range(SpamIterations):
+                        try:
+                            ReqURL = requests.post(SelectedWebhookURL, json=data)
+                            match ReqURL.status_code:
+                                case 200 | 204:
+                                    WebhookData["LastChecked"] = datetime.now().isoformat()
+                                    WebhookData["WebhookStatus"] = "success"
+                                    log.Logcustom(f"Sent message to '{SelectedWebhookName}' successfully! ({i+1}/{SpamIterations})", "success", "1;32m")
+                                
+                                case 401 | 403 | 404:
+                                    WebhookData["LastChecked"] = datetime.now().isoformat()
+                                    WebhookData["WebhookStatus"] = "fail"
+                                    log.Logerror("Webhook was not found!")
+                                    break
+
+                                case 429:
+                                    WebhookData["LastChecked"] = datetime.now().isoformat()
+                                    WebhookData["WebhookStatus"] = "ratelimit"
+                                    log.Logerror("Rate limit reached, Please try again later!")
+                                    break
+
+                                case _:
+                                    WebhookData["LastChecked"] = datetime.now().isoformat()
+                                    WebhookData["WebhookStatus"] = "unknown"
+                                    log.Logerror(f"Unknown status code error! (Status Code: {ReqURL.status_code})")
+                                    break
+
+                        except requests.Timeout:
+                            WebhookData["LastChecked"] = datetime.now().isoformat()
+                            WebhookData["WebhookStatus"] = "timeout"
+                            log.Logerror("Sending message timed out, Please try again!")
+                            break
+
+                        except requests.ConnectionError:
+                            WebhookData["LastChecked"] = datetime.now().isoformat()
+                            WebhookData["WebhookStatus"] = "conerror"
+                            log.Logerror("Sending message failed, Please check your internet!")
+                            break
+
+                        except requests.RequestException as e:
+                            WebhookData["LastChecked"] = datetime.now().isoformat()
+                            WebhookData["WebhookStatus"] = "unknown"
+                            log.Logerror(f"Sending message failed due to an unknown error!\n{e}")
+                            break
+
+                case _:
+                    WebhookData["LastChecked"] = datetime.now().isoformat()
+                    log.Logerror(f"This webhook does not seem to be working! Please check its status! (Status: {WebhookData["WebhookStatus"]})")
+
+            with open(SelectedWebhookPath, "w") as f:
+                json.dump(WebhookData, f, indent=4)
+
+        else:
+            log.Logerror("Please connect to a webhook first using 'requestconnection' command!")
+    except KeyboardInterrupt:
+        print()
+        log.Loginfo("Canceling...")
+
 
 def EnterChatMode():
     global SelectedWebhookName
@@ -648,10 +756,11 @@ AvailableCommands = {
     "addwebhook": {"aliases":["addwebhook", "addwh"], "command":AddWebhook, "description":"Let's you add a new webhook."},
     "deletewebhook": {"aliases":["deletewebhook", "delwh"], "command":DeleteWebhook, "description":"Let's you delete a saved webhook."},
     "editwebhook": {"aliases":["editwebhook", "editwh"], "command":EditWebhook, "description":"Let's you edit a saved webhook."}, 
-    "requestconnection": {"aliases":["requestconnection", "reqcon"], "command":RequestConnection, "description":"Tries to connect with a saved webhook."},
+    "requestconnection": {"aliases":["requestconnection", "connect", "request", "reqcon"], "command":RequestConnection, "description":"Tries to connect with a saved webhook."},
     "exitconnection": {"aliases":["exitconnection", "exitcon"], "command":ExitConnection, "description":"Exits the connection established with a webhook."},
     "exit": {"aliases":["exit"], "command":ExitCommand, "description":"Exits the program."},
     "sendmessage": {"aliases":["sendmessage", "sendmsg", "msg"], "command":SendMessage, "description":"Sends a single message to the established connection."},
+    "spamsendmessage": {"aliases":["spamsendmessage", "sendspam", "spam"], "command":SpamSendMessage, "description":"Sends a message multiple times to the established connection."},
     "enterchatmode": {"aliases":["enterchatmode", "enterchat", "chatmode"], "command":EnterChatMode, "description":"Let's you enter a field to message the webhook established with freely."},
     "settings": {"aliases":["settings", "config", "cfg"], "command":Settings, "description":"Let's you edit the settings of the program."}
     }
